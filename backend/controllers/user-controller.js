@@ -40,7 +40,7 @@ export const signup = async (req, res, next) => {
 
         // Else create a new user
     const hashedPassword = bcrypt.hashSync(password);
-    const user = new UserSchema({ name, email, password: hashedPassword });
+    const user = new UserSchema({ name, email, password: hashedPassword, blogs: [] });
     
     // Save the new user's data
     await user.save();

@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import BlogSchema from "../model/BlogSchema.js";
+import UserSchema from "../model/UserSchema.js";
 
 export const getAllBlogs = async (req, res, next) => {
     try {
@@ -32,18 +34,47 @@ export const addBlog = async (req, res, next) => {
     const { title, description, image, user } = req.body;
 
     try {
+        // ID of the user adding the blog
+        const existingUser = await UserSchema.findById(user);
+        if (!existingUser) {
+            return res.status(404).json({ message: "Unable To Find User With This ID" });
+        }
+    
         const existingBlog = await BlogSchema.findOne({ title });
 
-        // Checking for an exiting blog
+        // Checking for an existing blog
         if (existingBlog) {
             return res.status(400).json({ message: "This blog already exists" })
         }
         // Else creating a new blog
         const blog = new BlogSchema({ title, description, image, user });
 
-        // Save the new blog
-        await blog.save();
-        return res.status(200).json({ message: "New blog saved successfully!" });
+        // Save the new blog but first, declare a session
+        const session = await mongoose.startSession();
+
+        // Define a Transaction
+        session.startTransaction();
+
+        try {
+            // Saving the blog from the created session
+            await blog.save({ session });
+            // Pushing the blogs to the existing user array
+            existingUser.blogs.push(blog);
+            // Saving the existing user array
+            await existingUser.save({ session });
+            // Commiting the session Transaction
+            await session.commitTransaction();
+
+            return res.status(200).json({ message: "New blog saved successfully!" });
+
+        } catch (error) {
+            // If an Error occurs during Transction, Roll Back Changes
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            // End the session
+            session.endSession();
+        }
 
     } catch (err) {
         console.log(err);
@@ -77,7 +108,9 @@ export const deleteBlog = async (req, res, next) => {
 
     try {
         const existingBlogId = req.params.id;
-        const existingBlog = await BlogSchema.findByIdAndDelete(existingBlogId, { title });
+        const existingBlog = await BlogSchema.findByIdAndDelete(existingBlogId, { title }).populate("user");
+        await existingBlog.user.blogs.pull(existingBlog);
+        existingBlog.user.save();
 
         // Checking if blog exists
         if (!existingBlog) {
@@ -87,5 +120,22 @@ export const deleteBlog = async (req, res, next) => {
     } catch (err) {
         console.log(err);
         return res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+export const getByUserId = async (req, res, next) => {
+    const userId = req.params.id;
+
+    try {
+        const userBlogs = await UserSchema.findById(userId).populate("blogs");
+
+        if (!userBlogs) {
+            return res.status(404).json({ message: "No Blog Found" });
+        }
+
+        return res.status(200).json({ blogs:userBlogs });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Internal Server Error" })
     }
 }
