@@ -11,4 +11,5 @@
 
 <ul>
     <li><b>nanoid:</b> This small, secure and URL friendly unique ID generator was used to generate the short Urls with custome length (7).</li>
+    <li><b>bcrypt</b> This employes the bcrypt hashing algorithm to secure passwords. It is designed to be slow and computationally intensive. This makes it resistant to brute-force attacks and rainbow table attack</li>
 </ul>
