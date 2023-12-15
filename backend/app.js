@@ -2,13 +2,17 @@ import express from 'express'
 import mongoose from 'mongoose';
 import userRouter from './routes/user-routes.js';
 import blogRouter from './routes/blog-routes.js';
+import urlRouter from './routes/url-routes.js';
 
 const app = express();
 
 app.use(express.json());
 
+app.use(express.urlencoded({ extended: true }));
+
 app.use(('/api/user'), userRouter);
 app.use(('/api/blog'), blogRouter);
+app.use(('/api/url'), urlRouter);
 
 // Date middleware in GMT
 app.use((req, res, next) => {
